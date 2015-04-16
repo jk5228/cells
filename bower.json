@@ -1,0 +1,11 @@
+{
+  "name": "cells",
+  "description": "An evolutionary game",
+  "version": "0.0.0",
+  "homepage": "https://github.com/jk5228/cells",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "ticker": ">=0.1.0"
+  }
+}
