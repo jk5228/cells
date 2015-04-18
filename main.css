@@ -1,9 +1,8 @@
 body {
   margin: 0px; }
 
-#field {
-  width: 100vw;
-  height: 100vh;
+canvas {
+  margin: 0px;
   background-color: black; }
 
 /*# sourceMappingURL=main.css.map */
