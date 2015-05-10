@@ -5,130 +5,79 @@
  * 4/15/2015
  */
 
+// Config
+var population = 20;
+var canvas = document.getElementById('canvas');
+var maxwidth = canvas.width;
+var maxheight = canvas.height;
 
-var ticker = require('ticker');
+// Cursor
+var cursor = new Point(0,0);
 
-
-// Point
-
-function Point(x, y) {
-  this.x = x || 0;
-  this.y = y || 0;
-}
-
-
-// Return the point rotated by the given angle in radians w/r/t (0,0)
-Point.prototype.rotated = function(ang) {
-  var x = this.x * Math.cos(-ang) - this.y * Math.sin(-ang);
-  var y = this.x * Math.sin(-ang) + this.y * Math.cos(-ang);
-  return new Point(x,y);
+// Boid class
+function Boid(position,angle,speed,color) {
+  var position = position || new Point(0,0);
+  this.angle = angle || 90;
+  this.speed = speed || 1;
+  this.color = color || new Color('red');
+  this.path = new Path({
+    segments: [
+      [position.x-10,position.y-10],
+      [position.x,position.y+15],
+      [position.x+10,position.y-10],
+      [position.x-10,position.y-10]
+    ],
+    fillColor: this.color,
+    closed: true
+  });
+  this.path.rotate(this.angle-90,this.path.position);
 };
 
-// Return the distance to the given point
-Point.prototype.dist = function(pt) {
-  return Math.sqrt(Math.pow(this.x-pt.x,2) +
-                   Math.pow(this.y-pt.y,2));
-};
+// Animate boid
+Boid.prototype.iterate = function() {
 
+  // Update position
+  var rad = this.angle * Math.PI/180;
+  var dX = Math.cos(rad) * this.speed;
+  var dY = Math.sin(rad) * this.speed;
+  this.path.translate(new Point(dX,dY));
 
-// Cell
-
-function Cell(center,dna) {
-  this.center = center || new Point(0,0);
-  this.angle = -Math.PI/2;
-  this.dna   = dna || { speed: 1, attr: 1, rep: 1, alone: 1 };
-}
-
-Cell.prototype.width  = 20;    // Default height of cell
-Cell.prototype.height = 30;    // Default width of cell
-
-Cell.prototype.top = function() {
-  var pt = new Point(0,-Cell.prototype.height/2);
-  var x = pt.rotated(this.angle).x + this.center.x;
-  var y = pt.rotated(this.angle).y + this.center.y;
-  return new Point(x,y);
-};
-
-Cell.prototype.right = function() {
-  var pt = new Point(Cell.prototype.width/2,Cell.prototype.height/2);
-  var x = pt.rotated(this.angle).x + this.center.x;
-  var y = pt.rotated(this.angle).y + this.center.y;
-  return new Point(x,y);
-};
-
-Cell.prototype.left = function() {
-  var pt = new Point(-Cell.prototype.width/2,Cell.prototype.height/2);
-  var x = pt.rotated(this.angle).x + this.center.x;
-  var y = pt.rotated(this.angle).y + this.center.y;
-  return new Point(x,y);
-};
-
-Cell.prototype.draw = function() {
-  var ctx   = this.context;
-  var top   = this.top();
-  var right = this.right();
-  var left  = this.left();
-
-  // Draw cell
-  ctx.beginPath();
-  ctx.moveTo(top.x,top.y);      // Top point
-  ctx.lineTo(right.x,right.y);  // Bottom-right point
-  ctx.lineTo(left.x,left.y);    // Bottom-left point
-  ctx.lineTo(top.x,top.y);      // Top point
-  ctx.closePath();
-  ctx.fillStyle = 'white';
-  ctx.fill();
-};
-
-
-$(document).ready(function(){
-
-
-  // Set canvas properties
-  var canvas = document.getElementsByTagName('canvas')[0],
-      ctx    = canvas.getContext('2d');
-  var body = $('body');
-
-  Cell.prototype.context = ctx;
-
-  canvas.width = body.width();
-  canvas.height = body.height();
-
-
-  // Environment variables
-  var speed    = 5,      // Speed of game
-      popstart = 10,      // Size of starting population
-      popmax   = 5,      // Maximum population size
-      cells    = [];     // Cell array
-
-  for (var i = 0; i < popstart; i++) {      // Create start population
-    var dna = {
-      speed : Math.random() + 0.5,          // Movement speed
-      attr  : Math.random() + 0.5,          // Attraction to cells
-      rep   : Math.random() + 0.5,          // Repulsion from predators
-      alone : Math.random() + 0.5           // Behavior when alone
-    };
-    var pt = new Point(0,Math.random() * body.height());
-    cells.push(new Cell(pt,dna));
+  // Update angle
+  var vector = cursor - this.path.position;
+  var rawdiff = Math.floor(vector.angle) - this.angle;
+  console.log(rawdiff);
+  if ((rawdiff < 0 && rawdiff > -180) || rawdiff >= 180) {
+    this.angle -= this.speed;
+    if (this.angle < -180)
+      this.angle += 360;
+    this.path.rotate(-this.speed,this.path.position);
+  }
+  else if ((rawdiff > 0 && rawdiff < 180) || rawdiff <= -180) {
+    this.angle += this.speed;
+    if (this.angle > 180)
+      this.angle -= 360;
+    this.path.rotate(this.speed,this.path.position);
   }
 
+};
 
-  // Setup ticker
-  ticker(window, 60, 5)
-    .on('tick', function() {
-      canvas.width = body.width();
-      canvas.height = body.height();
+var boids = [];
 
-      for (var i = 0; i < cells.length; i++) {
-        cells[i].center.x += 1*cells[i].dna.speed;
-        cells[i].angle += 0.01*cells[i].dna.speed;
-      }
-      console.log(cells[0].center.dist(cells[1].center));
-    })
-    .on('draw', function() {
-      canvas.width = canvas.width;   // Clear canvas
-      for (var i = 0; i < cells.length; i++) {
-        cells[i].draw();
-      }
-    });
-});
+for (var i = 0; i < population; i++) {
+  var position = new Point(Math.random() * maxwidth,Math.random() * maxheight);
+  var angle = Math.floor(Math.random() * 360) - 180;
+  var speed = Math.ceil(Math.random() * 3);
+  var boid = new Boid(position,angle,speed);
+  boids.push(boid);
+}
+
+function onFrame() {
+  for (var i = 0; i < population; i++) {
+    boids[i].iterate();
+  }
+}
+
+function onMouseMove(e) {
+  cursor.x = e.point.x;
+  cursor.y = e.point.y;
+}
