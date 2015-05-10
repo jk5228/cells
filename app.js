@@ -6,17 +6,21 @@
  */
 
 // Config
-var population = 50;
+var population = 100;
 var canvas = document.getElementById('canvas');
 var maxwidth = canvas.width;
 var maxheight = canvas.height;
+var maxspeed = 5;
 
 // Cursor
+var pt = new Point(Math.floor(Math.random() * maxwidth),
+                   Math.floor(Math.random() * maxheight));
+
 var cursor = {
-  point: new Point(100,100),
+  point: pt,
   path: new Path.Circle({
-    center: new Point(100,100),
-    radius: 10,
+    center: pt,
+    radius: 20,
     fillColor: 'white'
   })
 };
@@ -26,7 +30,6 @@ function Boid(position,angle,speed,color) {
   var position = position || new Point(0,0);
   this.angle = angle || 90;
   this.speed = speed || 1;
-  this.color = color || new Color('red');
   this.path = new Path({
     segments: [
       [position.x-10,position.y-10],
@@ -34,7 +37,7 @@ function Boid(position,angle,speed,color) {
       [position.x+10,position.y-10],
       [position.x-10,position.y-10]
     ],
-    fillColor: this.color,
+    fillColor: this.color || new Color('red'),
     closed: true
   });
   this.path.rotate(this.angle-90,this.path.position);
@@ -42,6 +45,11 @@ function Boid(position,angle,speed,color) {
 
 // Animate boid
 Boid.prototype.iterate = function() {
+
+  // if (this.path.intersects(cursor.path)) {
+  //   // view.pause();
+  //   return;
+  // }
 
   // Update position
   var rad = this.angle * Math.PI/180;
@@ -66,6 +74,10 @@ Boid.prototype.iterate = function() {
     this.path.rotate(this.speed,this.path.position);
   }
 
+  // Update color
+  var dist = 30/cursor.path.position.getDistance(this.path.position);
+  this.path.fillColor.brightness = dist;
+
 };
 
 var boids = [];
@@ -73,7 +85,7 @@ var boids = [];
 for (var i = 0; i < population; i++) {
   var position = new Point(Math.random() * maxwidth,Math.random() * maxheight);
   var angle = Math.floor(Math.random() * 360) - 180;
-  var speed = Math.ceil(Math.random() * 5);
+  var speed = Math.ceil(Math.random() * maxspeed);
   var boid = new Boid(position,angle,speed);
   boids.push(boid);
 }
@@ -84,8 +96,9 @@ function onFrame() {
   }
 }
 
-function onMouseDown(e) {
+function onMouseMove(e) {
   var delta = e.point - cursor.point;
   cursor.point = e.point;
   cursor.path.translate(delta);
+  // view.play();
 }
