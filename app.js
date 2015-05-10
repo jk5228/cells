@@ -6,13 +6,20 @@
  */
 
 // Config
-var population = 20;
+var population = 50;
 var canvas = document.getElementById('canvas');
 var maxwidth = canvas.width;
 var maxheight = canvas.height;
 
 // Cursor
-var cursor = new Point(0,0);
+var cursor = {
+  point: new Point(100,100),
+  path: new Path.Circle({
+    center: new Point(100,100),
+    radius: 10,
+    fillColor: 'white'
+  })
+};
 
 // Boid class
 function Boid(position,angle,speed,color) {
@@ -43,9 +50,9 @@ Boid.prototype.iterate = function() {
   this.path.translate(new Point(dX,dY));
 
   // Update angle
-  var vector = cursor - this.path.position;
+  var vector = cursor.point - this.path.position;
   var rawdiff = Math.floor(vector.angle) - this.angle;
-  console.log(rawdiff);
+  // console.log(rawdiff);
   if ((rawdiff < 0 && rawdiff > -180) || rawdiff >= 180) {
     this.angle -= this.speed;
     if (this.angle < -180)
@@ -66,7 +73,7 @@ var boids = [];
 for (var i = 0; i < population; i++) {
   var position = new Point(Math.random() * maxwidth,Math.random() * maxheight);
   var angle = Math.floor(Math.random() * 360) - 180;
-  var speed = Math.ceil(Math.random() * 3);
+  var speed = Math.ceil(Math.random() * 5);
   var boid = new Boid(position,angle,speed);
   boids.push(boid);
 }
@@ -77,7 +84,8 @@ function onFrame() {
   }
 }
 
-function onMouseMove(e) {
-  cursor.x = e.point.x;
-  cursor.y = e.point.y;
+function onMouseDown(e) {
+  var delta = e.point - cursor.point;
+  cursor.point = e.point;
+  cursor.path.translate(delta);
 }
